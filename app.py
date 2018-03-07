@@ -1,13 +1,6 @@
-from __future__ import print_function
-from future.standard_library import install_aliases
-install_aliases()
-
-from urllib.parse import urlparse, urlencode
-from urllib.request import urlopen, Request
-from urllib.error import HTTPError
-
 import json
 import os
+import requests
 
 from flask import Flask
 from flask import request
@@ -20,11 +13,9 @@ app = Flask(__name__)
 @app.route('/webhook', methods=['POST'])
 def webhook():
     req = request.get_json(silent=True, force=True)
-
-    print("Request:")
     print(json.dumps(req, indent=4))
-
-    res = processRequest(req)
+    
+    res = makeResponse(req)
 
     res = json.dumps(res, indent=4)
     # print(res)
@@ -33,68 +24,30 @@ def webhook():
     return r
 
 
-def processRequest(req):
-    if req.get("result").get("action") != "yahooWeatherForecast":
-        return {}
-    baseurl = "https://query.yahooapis.com/v1/public/yql?"
-    yql_query = makeYqlQuery(req)
-    if yql_query is None:
-        return {}
-    yql_url = baseurl + urlencode({'q': yql_query}) + "&format=json"
-    result = urlopen(yql_url).read()
-    data = json.loads(result)
-    res = makeWebhookResult(data)
-    return res
-
-
-def makeYqlQuery(req):
+def makeResponse(req):
+    
     result = req.get("result")
+    action = result.get("action")
     parameters = result.get("parameters")
+    if action != "Wetterabfrage":
+        return {}
     city = parameters.get("geo-city")
-    if city is None:
-        return None
-
-    return "select * from weather.forecast where woeid in (select woeid from geo.places(1) where text='" + city + "')"
-
-
-def makeWebhookResult(data):
-    query = data.get('query')
-    if query is None:
-        return {}
-
-    result = query.get('results')
-    if result is None:
-        return {}
-
-    channel = result.get('channel')
-    if channel is None:
-        return {}
-
-    item = channel.get('item')
-    location = channel.get('location')
-    units = channel.get('units')
-    if (location is None) or (item is None) or (units is None):
-        return {}
-
-    condition = item.get('condition')
-    if condition is None:
-        return {}
-
-    # print(json.dumps(item, indent=4))
-
-    speech = "Today the weather in " + location.get('city') + ": " + condition.get('text') + \
-             ", And the temperature is " + condition.get('temp') + " " + units.get('temperature')
-
-    print("Response:")
-    print(speech)
-
+    date = parameters.get("date")
+    
+    r = requests.get("http://samples.openweathermap.org/data/2.5/forecast?q="+city+"&appid=ecd11b887d65ca7a4464cf11f3a90528")
+    json_object = r.json()
+    weather = json_object["list"]
+    #for i in range(0,30):
+        #if date in weather[i]["dt_text"]:
+            #condition = weather[i]["weather"][i][0]["description"]
+    condition = weather[1]["weather"][0]["description"]
+    
+    speech = "Das Wetter in " + city + " am " + date + " ist " + condition
     return {
         "speech": speech,
         "displayText": speech,
-        # "data": data,
-        # "contextOut": [],
-        "source": "apiai-weather-webhook-sample"
-    }
+        "source": "apiai-weather-webhook-sample"}
+    
 
 
 if __name__ == '__main__':
