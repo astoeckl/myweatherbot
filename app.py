@@ -1,5 +1,6 @@
 import json
-#import os
+import os
+#import sys
 import requests
 
 from flask import Flask
@@ -50,11 +51,18 @@ def makeResponse(req):
     
 
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
     #port = int(os.getenv('PORT', 5000))
     #port = 5000
 
     #print("Starting app on port %d" % port)
 
     #app.run(debug=True, port=port, host='0.0.0.0')
-    app.run()
+    #app.run()
+    
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+
+    print("Starting app on port %d" % port)
+
+    app.run(debug=False, port=port, host='0.0.0.0')
